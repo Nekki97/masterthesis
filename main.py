@@ -11,6 +11,9 @@ from discriminators import *
 # print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 
+test
+
+
 np.random.seed(1)
 tf.random.set_seed(1)
 
