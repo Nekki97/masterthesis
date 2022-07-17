@@ -98,6 +98,11 @@ class CycleGan(keras.Model):
             same_x = self.gen_F(real_x, training=True)
             same_y = self.gen_G(real_y, training=True)
 
+
+            # Add noise to real and fake images before discriminator to stabilize training
+            
+
+
             # Discriminator output
             disc_real_x = self.disc_X(real_x, training=True)
             disc_fake_x = self.disc_X(fake_x, training=True)

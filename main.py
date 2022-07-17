@@ -82,7 +82,7 @@ for dataset_pair_names in cfg.dataset_pairs:
 
 							# show_np_data(train_data, train_labels)
 
-							train_dataset = tf.data.Dataset.from_tensor_slices(train_data)
+							train_dataset = tf.data.Dataset.from_tensor_slices(train_data[:,:,:,0])
 							val_dataset = tf.data.Dataset.from_tensor_slices(val_data)
 							test_dataset = tf.data.Dataset.from_tensor_slices(test_data)
 
@@ -110,11 +110,12 @@ for dataset_pair_names in cfg.dataset_pairs:
 						cfg.trial_settings["steps_per_epoch"] = min(np_train_datasets[0].shape[0], np_train_datasets[1].shape[0]) // cfg.batch_size
 
 						batched_train_datasets = [train_datasets[0].batch(cfg.batch_size), \
-												  train_datasets[1].batch(cfg.batch_size)]
+											  	  train_datasets[1].batch(cfg.batch_size)]
 
 						batched_val_datasets = [val_datasets[0].batch(cfg.batch_size), \
 											    val_datasets[1].batch(cfg.batch_size)]
 
+						
 						# Call model according to settings
 						model = get_model(training=True)
 

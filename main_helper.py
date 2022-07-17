@@ -28,29 +28,39 @@ class NEWGANMonitor(keras.callbacks.Callback):
 					fig, ax = plt.subplots(5, self.num_img, figsize=(6*self.num_img, 6*5))
 					for i, img in enumerate(self.val_data[k].take(self.num_img)):
 						
-						if k==0: prediction = self.model.gen_G(img)[0].numpy()
-						if k==1: prediction = self.model.gen_F(img)[0].numpy()
+						img = img[:,:,0]
+						label = img[:,:,1]
 
-						prediction = (prediction * 127.5 + 127.5).astype(np.uint8)
-						img = (img[0] * 127.5 + 127.5).numpy().astype(np.uint8)
+						if k==0: 
+							img_prediction = self.model.gen_G(img)[0].numpy()
+							label_prediction = self.model.gen_G(label)[0].numpy()
+						if k==1: 
+							img_prediction = self.model.gen_F(img)[0].numpy()
+							label_prediction = self.model.gen_F(label)[0].numpy()
 
-						ax[0, i].imshow(img[:,:,0], cmap='gray')
+						img = (img[0] * 127.5 + 127.5).astype(np.uint8)
+						label = (label[0] * 127.5 + 127.5).numpy().astype(np.uint8)
+
+						img_prediction = (img_prediction * 127.5 + 127.5).astype(np.uint8)
+						label_prediction = (label_prediction * 127.5 + 127.5).numpy().astype(np.uint8)
+
+						ax[0, i].imshow(img, cmap='gray')
 						ax[0, i].set_title("Input image")
 						ax[0, i].axis("off")
 						
-						ax[1, i].imshow(img[:,:,1], cmap='gray')
+						ax[1, i].imshow(label, cmap='gray')
 						ax[1, i].set_title("Input label")
 						ax[1, i].axis("off")
 
-						ax[2, i].imshow(prediction[:,:,0], cmap='gray')
+						ax[2, i].imshow(img_prediction, cmap='gray')
 						ax[2, i].set_title("Translated image")
 						ax[2, i].axis("off")
 						
-						ax[3, i].imshow(prediction[:,:,1], cmap='gray')
+						ax[3, i].imshow(label_prediction, cmap='gray')
 						ax[3, i].set_title("Translated label")
 						ax[3, i].axis("off")
 
-						thrsh_label_pred = np.copy(prediction[:,:,1])
+						thrsh_label_pred = np.copy(label_prediction)
 						thrsh_label_pred[thrsh_label_pred>0.5] = 1
 						thrsh_label_pred[thrsh_label_pred<=0.5] = 0
 		
@@ -89,10 +99,8 @@ def new_generate_data(model_save_path, test_datasets, n_gen_imgs=1):
 		for k in range(2):
 			cols = 32
 			sets = 2 # set of outputs
-			if k==0:
-				rows_per_set = 5
-			elif k==1:
-				rows_per_set = 6
+
+			rows_per_set = 7
 
 			gen_imgs = n_gen_imgs
 			m = 0
@@ -103,65 +111,59 @@ def new_generate_data(model_save_path, test_datasets, n_gen_imgs=1):
 				if filename not in os.listdir(model_save_path+"/_generated_data"):	
 					fig, ax = plt.subplots(rows_per_set*sets, cols, figsize=(cols*4, sets*rows_per_set*4))
 					test_batch = test_datasets[k].take(sets*cols)
-
 					for i, img in enumerate(test_batch):
-						if k==0: prediction = model.gen_G(img, training=False)[0].numpy()
-						if k==1: prediction = model.gen_F(img, training=False)[0].numpy()
+						img = img[:,:,0]
+						label = label[:,:,1]
 
-						prediction = (prediction * 127.5 + 127.5).astype(np.uint8)
-						img = (img[0] * 127.5 + 127.5).numpy().astype(np.uint8)
+						if k==0: 
+							img_prediction = model.gen_G(img, training=False)[0].numpy()
+							label_prediction = model.gen_G(img, training=False)[0].numpy()
+						if k==1: 
+							img_prediction = model.gen_F(img, training=False)[0].numpy()
+							label_prediction = model.gen_F(img, training=False)[0].numpy()
 
-						if k==0:
-							ax[0+rows_per_set*(i//cols), i%cols].imshow(img[:,:,0], cmap='gray')
-							ax[0+rows_per_set*(i//cols), i%cols].set_title("Input image")
+						img = (img[0] * 127.5 + 127.5).astype(np.uint8)
+						label = (label[0] * 127.5 + 127.5).numpy().astype(np.uint8)
+
+						img_prediction = (img_prediction * 127.5 + 127.5).astype(np.uint8)
+						label_prediction = (label_prediction * 127.5 + 127.5).numpy().astype(np.uint8)						
+
+							ax[0+rows_per_set*(i//cols), i%cols].imshow(img, cmap='gray')
+							ax[0+rows_per_set*(i//cols), i%cols].set_title("Input image")	
 							ax[0+rows_per_set*(i//cols), i%cols].axis("off")
-							
-							ax[1+rows_per_set*(i//cols), i%cols].imshow(img[:,:,1], cmap='gray')
+
+							ax[1+rows_per_set*(i//cols), i%cols].imshow(label, cmap='gray')
 							ax[1+rows_per_set*(i//cols), i%cols].set_title("Input label")
 							ax[1+rows_per_set*(i//cols), i%cols].axis("off")
 
 							ax[2+rows_per_set*(i//cols), i%cols].axis("off")
 
-							ax[3+rows_per_set*(i//cols), i%cols].imshow(prediction[:,:,0], cmap='gray')
+							ax[3+rows_per_set*(i//cols), i%cols].imshow(img_prediction, cmap='gray')
 							ax[3+rows_per_set*(i//cols), i%cols].set_title("Translated image")
 							ax[3+rows_per_set*(i//cols), i%cols].axis("off")
 
-							ax[4+rows_per_set*(i//cols), i%cols].axis("off")							
+							ax[4+rows_per_set*(i//cols), i%cols].imshow(label_prediction, cmap='gray')
+							ax[4+rows_per_set*(i//cols), i%cols].set_title("Translated label")
+							ax[4+rows_per_set*(i//cols), i%cols].axis("off")
 
-						elif k==1:
-							ax[0+rows_per_set*(i//cols), i%cols].imshow(img[:,:,0], cmap='gray')
-							ax[0+rows_per_set*(i//cols), i%cols].set_title("Input image")
-							ax[0+rows_per_set*(i//cols), i%cols].axis("off")
-
-							ax[1+rows_per_set*(i//cols), i%cols].axis("off")
-
-							ax[2+rows_per_set*(i//cols), i%cols].imshow(prediction[:,:,0], cmap='gray')
-							ax[2+rows_per_set*(i//cols), i%cols].set_title("Translated image")
-							ax[2+rows_per_set*(i//cols), i%cols].axis("off")
-
-							ax[3+rows_per_set*(i//cols), i%cols].imshow(prediction[:,:,1], cmap='gray')
-							ax[3+rows_per_set*(i//cols), i%cols].set_title("Translated label")
-							ax[3+rows_per_set*(i//cols), i%cols].axis("off")
-
-							thrsh_label_pred = np.copy(prediction[:,:,1])
+							thrsh_label_pred = np.copy(label_prediction)
 							thrsh_label_pred[thrsh_label_pred>0.5] = 1
 							thrsh_label_pred[thrsh_label_pred<=0.5] = 0
 
-							ax[4+rows_per_set*(i//cols), i%cols].imshow(thrsh_label_pred, cmap='gray')
-							ax[4+rows_per_set*(i//cols), i%cols].set_title("Thresholded translated label")
-							ax[4+rows_per_set*(i//cols), i%cols].axis("off")
-
+							ax[5+rows_per_set*(i//cols), i%cols].imshow(thrsh_label_pred, cmap='gray')
+							ax[5+rows_per_set*(i//cols), i%cols].set_title("Thresholded translated label")
 							ax[5+rows_per_set*(i//cols), i%cols].axis("off")
+
+							ax[6+rows_per_set*(i//cols), i%cols].axis("off")
 
 
 					Path(model_save_path+"/_generated_data").mkdir(parents=True, exist_ok=True)
 
 					path = os.path.join(model_save_path,"_generated_data",filename)
 					fig.savefig(path)#, bbox_inches='tight')
-					if k==0:
-						np.savez(path[:-3]+'npz',input_img=img[:,:,0], input_label=img[:,:,1], output_img=prediction[:,:,0])
-					elif k==1:
-						np.savez(path[:-3]+'npz',input_img=img[:,:,0], output_img=prediction[:,:,0], output_label=prediction[:,:,1], thresh_out_label=thrsh_label_pred)
+				
+					np.savez(path[:-3]+'npz',input_img=img[:,:,0], output_img=prediction[:,:,0], input_label=img[:,:,1], output_label=prediction[:,:,1], thresh_out_label=thrsh_label_pred)
+					
 					if cfg.verbose: print("Generated data saved as: %s"%(filename))
 					plt.close(fig)
 					

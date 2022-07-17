@@ -79,14 +79,14 @@ n_epochs 			= 100
 image_count 		= 100 # 0 for all available
 
 # !!! when changing make sure preprocess is True !!! 
-image_shape 		= [128, 128, 2] # data input shape
+image_shape 		= [128, 128, 1] # data input shape
 
 save_period 		= 5
 
 
 verbose 			= True
 
-preprocess			= False	# if False, takes saved preprocessed data
+preprocess			= True	# if False, takes saved preprocessed data
 augment 			= False
 
 visualize_data 		= True
@@ -121,3 +121,11 @@ trial_settings = {"modelID"				: None,
 
 				  #"g_lossID"			: None,
 				  #"g_loss"				: None,
+
+
+
+# git add .
+# git commit -m "message"
+# git push -u origin single_channel
+
+# git switch -c newbranchname
