@@ -144,7 +144,7 @@ for dataset_pair_names in cfg.dataset_pairs:
 						
 						Path(os.path.join(cfg.output_root,"logs")).mkdir(parents=True, exist_ok=True)
 						# Access with "tensorboard --logdir=logs" in cmd (path here is just "logs")
-						tensorboard = keras.callbacks.TensorBoard(log_dir=os.path.join(cfg.code_root,"logs"))
+						tensorboard = keras.callbacks.TensorBoard(log_dir=os.path.join(cfg.output_root,"logs"))
 
 						if cfg.verbose: print("Model input:\n", batched_train_datasets[0], "\n", batched_train_datasets[1], "\n")
 						if cfg.verbose: print("TRAINING START!")
