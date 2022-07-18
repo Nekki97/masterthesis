@@ -30,8 +30,12 @@ def load_data(dataset_name, n_data):
 	# Find pot. labels
 	has_labels = os.path.isdir(path+"_masks")
 	if has_labels:
-		label_filenames = [f for f in glob.glob(path+"_masks"+"/*"+filetype)]
-		if cfg.verbose: print("Found %d %s label files!"%(len(label_filenames), filetype))
+		if len(glob.glob(path+"_masks"+"/*.nii.gz")) > 0:
+			label_filetype = ".nii.gz"
+		elif len(glob.glob(path+"_masks"+"/*.nrrd")) > 0:
+			label_filetype = ".nrrd"
+		label_filenames = [f for f in glob.glob(path+"_masks"+"/*"+label_filetype)]
+		if cfg.verbose: print("Found %d %s label files!"%(len(label_filenames), label_filetype))
 
 	# Load data
 	data = []
@@ -67,8 +71,11 @@ def load_data(dataset_name, n_data):
 
 
 	# Make image size equal by adding zeros to all smaller than the largest
-	max_width = np.max([data[i].shape[0] for i in range(len(data))])
+	max_width  = np.max([data[i].shape[0] for i in range(len(data))])
 	max_height = np.max([data[i].shape[1] for i in range(len(data))])
+	if has_labels:
+		max_width  = max(max_width,  np.max([labels[i].shape[0] for i in range(len(data))]))
+		max_height = max(max_height, np.max([labels[i].shape[1] for i in range(len(data))]))
 
 	new_data = np.zeros((len(data), max_width, max_height, min_n_imgs))
 	new_labels = []

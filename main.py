@@ -1,3 +1,4 @@
+import traceback
 from data_loader import *
 from main_helper import *
 # from data_loader import *
@@ -21,6 +22,9 @@ for dataset_pair_names in cfg.dataset_pairs:
 		for loss_weights_number in cfg.loss_weights:
 			while True:
 				try:
+					cuda.select_device(0)
+					cuda.close()
+
 					physical_devices = tf.config.list_physical_devices('GPU') 
 					tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
@@ -41,6 +45,7 @@ for dataset_pair_names in cfg.dataset_pairs:
 					with tf.device('/CPU:0'):
 						train_datasets = []
 						val_datasets = []
+						val_labels_sets = []
 						test_datasets = []
 
 						np_train_datasets = []
@@ -67,14 +72,18 @@ for dataset_pair_names in cfg.dataset_pairs:
 
 							load_path = os.path.join(cfg.local_data_root, "preprocessed_data", dataset_name+"-preprocessed.npz")
 							with np.load(load_path) as data:
-								train_data 		= data['train_data']
-								val_data 		= data['val_data']
+								train_data_temp = data['train_data']
+								val_data_temp 	= data['val_data']
 								test_data 		= data['test_data']
 
 
 							# Limit training data for various time-saving reasons
 							if cfg.image_count > 0:
-								train_data = train_data[:cfg.image_count,:,:,:]
+								train_data_temp = train_data_temp[:cfg.image_count,:,:,:]
+
+							train_data 	= np.expand_dims(train_data_temp[:,:,:,0],axis=3)
+							val_data 	= np.expand_dims(val_data_temp[:,:,:,0]	,axis=3)
+							val_label 	= np.expand_dims(val_data_temp[:,:,:,1]	,axis=3)
 
 							np_train_datasets.append(train_data)
 							np_val_datasets.append(val_data)
@@ -82,12 +91,14 @@ for dataset_pair_names in cfg.dataset_pairs:
 
 							# show_np_data(train_data, train_labels)
 
-							train_dataset = tf.data.Dataset.from_tensor_slices(train_data[:,:,:,0])
+							train_dataset = tf.data.Dataset.from_tensor_slices(train_data)
 							val_dataset = tf.data.Dataset.from_tensor_slices(val_data)
+							val_labels = tf.data.Dataset.from_tensor_slices(val_label)
 							test_dataset = tf.data.Dataset.from_tensor_slices(test_data)
 
 							train_datasets.append(train_dataset)
 							val_datasets.append(val_dataset)
+							val_labels_sets.append(val_labels)
 							test_datasets.append(test_dataset)
 
 						# Define folder coding
@@ -115,6 +126,9 @@ for dataset_pair_names in cfg.dataset_pairs:
 						batched_val_datasets = [val_datasets[0].batch(cfg.batch_size), \
 											    val_datasets[1].batch(cfg.batch_size)]
 
+						batched_val_labels = [val_labels_sets[0].batch(cfg.batch_size), \
+										      val_labels_sets[1].batch(cfg.batch_size)]
+
 						
 						# Call model according to settings
 						model = get_model(training=True)
@@ -124,7 +138,7 @@ for dataset_pair_names in cfg.dataset_pairs:
 						Path(checkpoint_filepath).mkdir(parents=True, exist_ok=True)
 						model_checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath+"/epoch_{epoch:03d}/checkpoint_file_{epoch:03d}", verbose=1, save_weights_only=True, save_freq=int(cfg.save_period*cfg.trial_settings["steps_per_epoch"]))
 
-						plotter = NEWGANMonitor(batched_val_datasets, checkpoint_filepath, num_img=8, period=cfg.save_period)
+						plotter = NEWGANMonitor(batched_val_datasets, batched_val_labels, checkpoint_filepath, num_img=8, period=cfg.save_period)
 
 						keras.callbacks.ProgbarLogger()
 						
@@ -170,8 +184,10 @@ for dataset_pair_names in cfg.dataset_pairs:
 					########################################################################################################
 					tf.keras.backend.clear_session()
 
-				except:
 					cuda.select_device(0)
 					cuda.close()
+
+				except Exception:
+					traceback.print_exc()
 					continue
 				break

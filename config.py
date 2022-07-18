@@ -12,23 +12,29 @@ output_root		= root+"Output/"
 test_frac = 0.2
 val_frac = 0.2
 
-all_datasets = {"XCAT_liver": 			{"ID"			: 1,
-										"name"			: "XCAT_liver",
-										"keyword"		: "",
-										"patient_dirs"	: False,
-										"path"			: root+"J-Datasets/XCAT_liver"},
+all_datasets = {"XCAT_liver": 				{"ID"			: 1,
+											"name"			: "XCAT_liver",
+											"keyword"		: "",
+											"patient_dirs"	: False,
+											"path"			: root+"J-Datasets/genT1_XCAT_liver"},
 
-				"patient_liver_nrrd": 	{"ID"			: 2,
-										"name"			: "patient_liver_nrrd",
-										"keyword"		: "t1_vibe_opp-in_tra",
-										"patient_dirs"	: False,
-										"path"			: local_data_root+"/patient_liver_conv_nrrd"},
+				"patient_liver_nrrd": 		{"ID"			: 2,
+											"name"			: "patient_liver_nrrd",
+											"keyword"		: "t1_vibe_opp-in_tra",
+											"patient_dirs"	: False,
+											"path"			: local_data_root+"/patient_liver_conv_nrrd"},
 
-				"Dominik_XCAT_liver":	{"ID"			: 3,
-										"name"			: "Dominik_XCAT_liver",
-										"keyword"		: "",
-										"patient_dirs"	: False,
-										"path"			: root+"J-Datasets/Dominik_XCAT_liver"}}
+				"Dominik_XCAT_liver":		{"ID"			: 3,
+											"name"			: "Dominik_XCAT_liver",
+											"keyword"		: "",
+											"patient_dirs"	: False,
+											"path"			: root+"J-Datasets/Dominik_genT1_XCAT_liver"},
+
+				"postVIBE_XCAT":			{"ID"			: 4,
+											"name"			: "postVIBE_XCAT",
+											"keyword"		: "",
+											"patient_dirs"	: False,
+											"path"			: root+"J-Datasets/postVIBE_XCAT"}}
 
 
 ####################################### Data Augmentation Parameters ###################################
@@ -45,9 +51,9 @@ augmentation_cfg = {"gaussian_noise_only":	{"ID"					: 1,
 
 
 # Only work if input size is smaller than original
-randomly_crop = True
-augment_crop = True # Augment by randomly cropping same image multiple times
-n_aug_crops = 3 # How often 
+randomly_crop 	= True
+augment_crop 	= True # Augment by randomly cropping same image multiple times
+n_aug_crops 	= 4 # How often 
 
 ####################################### Keras CycleGAN Parameters ###################################
 # Weights initializer for the layers.
@@ -62,21 +68,20 @@ gamma_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 # 						 "perc"	: {"ID"		: 4, "identity"	: False, "gradient"	: False, "percept"	: True}}
 
 models_cfg = {"VanillaCycleGAN" 	: {"ID" : 1},	# VanillaCycleGAN: 	basic discriminator, 	resnet generator
-			  "AdvancedCycleGAN" 	: {"ID"	: 2}}	# AdvancedCycleGAN: patchgan discriminator, unet generator
+			  "AdvancedCycleGAN" 	: {"ID"	: 2},	# AdvancedCycleGAN: patchgan discriminator, unet generator
+			  "DominikCycleGAN"		: {"ID"	: 3}}	# DominikCycleGAN: 	patchgan discriminator, resnet generator
 
 loss_weight_cfg = {"1":{"ID":1,"cycle":10,"identity":0.5,"gradient":0,  "perception":0}, # Vanilla
 				   "2":{"ID":2,"cycle":10,"identity":0.4,"gradient":0.4,"perception":0}, # Dominiks Code
 			   	   "3":{"ID":3,"cycle":10,"identity":0,  "gradient":0,  "perception":0},
-			   	   "4":{"ID":4,"cycle":10,"identity":0.1,"gradient":0,  "perception":0},
-			   	   "5":{"ID":5,"cycle":10,"identity":1,  "gradient":0,  "perception":0},
-			   	   "6":{"ID":6,"cycle":10,"identity":5,  "gradient":0,  "perception":0},
-			   	   "7":{"ID":7,"cycle":10,"identity":10, "gradient":0,  "perception":0}}
+			   	   "4":{"ID":5,"cycle":10,"identity":5,  "gradient":0,  "perception":0},
+			   	   "5":{"ID":6,"cycle":10,"identity":10,  "gradient":0,  "perception":0}}
 
 ########################################## Training Parameters #########################################
-batch_size 			= 1
-# samples_per_volume 	= 4
+batch_size 			= 2
+# samples_per_volume = 4
 n_epochs 			= 100
-image_count 		= 100 # 0 for all available
+image_count 		= 200 # 0 for all available
 
 # !!! when changing make sure preprocess is True !!! 
 image_shape 		= [128, 128, 1] # data input shape
@@ -87,7 +92,7 @@ save_period 		= 5
 verbose 			= True
 
 preprocess			= True	# if False, takes saved preprocessed data
-augment 			= False
+augment 			= False # Does nothing rn
 
 visualize_data 		= True
 train 				= True
@@ -96,15 +101,18 @@ test 				= True
 ########################################## Loop Configurations #########################################
 
 # Gen F generates first in pair, Gen G generates second in pair
-dataset_pairs 			= [["Dominik_XCAT_liver", "patient_liver_nrrd"]]
+dataset_pairs 			= [["postVIBE_XCAT", 		"patient_liver_nrrd"]]
+						   #["Dominik_XCAT_liver", 	"patient_liver_nrrd"]]
 # generator_losses 		= ["comb"]
-models 					= ["VanillaCycleGAN", "AdvancedCycleGAN"]
-loss_weights			= ["1", "2"]#, "3", "4", "5", "6", "7"]
+models 					= ["DominikCycleGAN", "AdvancedCycleGAN"]
+loss_weights			= ["2", "1"]
 
 # augmentation_strategies = ["gaussian_noise_only"]
 
+# TODO: make list of trial configuration --> run one by one for better customizability
+
 # All data will be saved in folder named:
-trial_name 				= "basic_run_2gans_2losses"
+trial_name 				= "test_single_channel"
 
 
 ########################################################################################################
