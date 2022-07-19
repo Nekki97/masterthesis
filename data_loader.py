@@ -340,9 +340,12 @@ def split_into_groups_and_save(dataset_name, dataset):
 	# Shuffle files and images to prevent e.g. test having only the lower half
 	# Get all imgs of all files into one dim
 
+	# SOURCE OF ERROR
 	n_test_img 	= int(dataset.shape[1] * cfg.test_frac)
 	n_val_img 	= int(dataset.shape[1] * cfg.val_frac)
 	n_train_img = int(dataset.shape[1] - n_test_img - n_val_img)
+
+	print(n_test_img, n_val_img, n_train_img)
 
 	fileIDs = np.arange(dataset.shape[1])
 	np.random.shuffle(fileIDs)
