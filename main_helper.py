@@ -213,20 +213,20 @@ def get_model(training):
 	if training:
 		if cfg.verbose:
 			print("\n========= Training Parameters: =========")
-			print("- model name: \t\t%s" 	% (cfg.trial_settings["modelname"]))
+			print("- model name: \t\t%s" 	% (cfg.trial_data["modelname"]))
 			print("- batch size: \t\t%d" 	% (cfg.batch_size))
 			#print("- samples per volume: \t%d" 	% (cfg.samples_per_volume))
 			print("- epochs: \t\t%d" 	% (cfg.n_epochs))
-			print("- steps per epoch: \t%d" 	% (cfg.trial_settings["steps_per_epoch"]))
-			print("- loss weights: %.1f, %.1f, %.1f, %.1f"%(cfg.loss_weight_cfg[cfg.trial_settings["loss_weights"]]["cycle"],\
-															cfg.loss_weight_cfg[cfg.trial_settings["loss_weights"]]["identity"], \
-															cfg.loss_weight_cfg[cfg.trial_settings["loss_weights"]]["gradient"],\
-															cfg.loss_weight_cfg[cfg.trial_settings["loss_weights"]]["perception"]))
-			print("- input shape 1: \t%s"% str(cfg.trial_settings["training_img_shapes"][0]))
-			print("- input shape 2: \t%s"% str(cfg.trial_settings["training_img_shapes"][1]))
+			print("- steps per epoch: \t%d" 	% (cfg.trial_data["steps_per_epoch"]))
+			print("- loss weights: %.1f, %.1f, %.1f, %.1f"%(cfg.loss_weight_cfg[cfg.trial_data["loss_weights"]]["cycle"],\
+															cfg.loss_weight_cfg[cfg.trial_data["loss_weights"]]["identity"], \
+															cfg.loss_weight_cfg[cfg.trial_data["loss_weights"]]["gradient"],\
+															cfg.loss_weight_cfg[cfg.trial_data["loss_weights"]]["perception"]))
+			print("- input shape 1: \t%s"% str(cfg.trial_data["training_img_shapes"][0]))
+			print("- input shape 2: \t%s"% str(cfg.trial_data["training_img_shapes"][1]))
 			print("========================================\n")
 
-	if cfg.trial_settings["modelname"] == "VanillaCycleGAN":
+	if cfg.trial_data["modelname"] == "VanillaCycleGAN":
 		model = CycleGan(generator_G 		= get_resnet_generator(name="generator_G"), 
 					   	 generator_F 		= get_resnet_generator(name="generator_F"),
 					     discriminator_X 	= get_discriminator(name="discriminator_X"), 
@@ -240,7 +240,7 @@ def get_model(training):
 			    disc_Y_optimizer=keras.optimizers.Adam(learning_rate=2e-4, beta_1=0.5),
 			    gen_loss_fn=generator_loss_fn,
 			    disc_loss_fn=discriminator_loss_fn)
-	elif cfg.trial_settings["modelname"] == "AdvancedCycleGAN":
+	elif cfg.trial_data["modelname"] == "AdvancedCycleGAN":
 		model = CycleGan(generator_G 		= unet(name="generator_G"), 
 					   	 generator_F 		= unet(name="generator_F"),
 					     discriminator_X 	= patchgan(name="discriminator_X"), 
@@ -254,7 +254,7 @@ def get_model(training):
 			    disc_Y_optimizer=keras.optimizers.Adam(learning_rate=2e-4, beta_1=0.5),
 			    gen_loss_fn=generator_loss_fn,
 			    disc_loss_fn=discriminator_loss_fn)
-	elif cfg.trial_settings["modelname"] == "DominikCycleGAN":
+	elif cfg.trial_data["modelname"] == "DominikCycleGAN":
 		model = CycleGan(generator_G 		= get_resnet_generator(name="generator_G"), 
 					   	 generator_F 		= get_resnet_generator(name="generator_F"),
 					     discriminator_X 	= patchgan(name="discriminator_X"), 

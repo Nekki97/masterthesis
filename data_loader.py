@@ -59,9 +59,18 @@ def load_data(dataset_name, n_data):
 			label.SetDirection(image.GetDirection())
 
 			label = np.moveaxis(sitk.GetArrayFromImage(label),0,-1)
-			labels.append(label)
+			
 
 		image = np.moveaxis(sitk.GetArrayFromImage(image),0,-1)
+
+		if has_labels:
+			if np.array_equal(label,image):
+				for k, modelnumber in enumerate(list(cfg.organ_mask_vals[cfg.xcat_organ_mask].keys())):
+					if modelnumber in label_filenames[i]:
+						organ_val = list(cfg.organ_mask_vals[cfg.xcat_organ_mask].items())[k][1]#
+						label = np.where(label==organ_val, 1.0, 0.0)
+			labels.append(label)
+
 		data.append(image)
 
 
@@ -146,8 +155,7 @@ def preprocess(data, labels=[], size=0):
 
 			# Threshold labels and skip if empty
 			if _has_labels:
-				label[label>=0.5] = 1.0
-				label[label<0.5] = 0.0
+				label = np.where(label>=0.5, 1.0, 0.0)
 				if np.sum(label) == 0.0:
 					continue
 
@@ -328,13 +336,13 @@ def combine_data(data, labels):
 
 
 def split_into_groups_and_save(dataset_name, dataset):
-	# Split data into train/val/test images of each file (better for generalizability) 
+	# Split data into train/val/test images where each set gets a specific amount of patients to prevent test sets having seen patient
 	# Shuffle files and images to prevent e.g. test having only the lower half
 	# Get all imgs of all files into one dim
 
-	n_test_img = int(dataset.shape[-1]*cfg.test_frac)
-	n_val_img = int(dataset.shape[-1]*cfg.val_frac)
-	n_train_img = int(dataset.shape[-1] - n_test_img - n_val_img)
+	n_test_img 	= int(dataset.shape[1] * cfg.test_frac)
+	n_val_img 	= int(dataset.shape[1] * cfg.val_frac)
+	n_train_img = int(dataset.shape[1] - n_test_img - n_val_img)
 
 	fileIDs = np.arange(dataset.shape[1])
 	np.random.shuffle(fileIDs)
@@ -344,9 +352,10 @@ def split_into_groups_and_save(dataset_name, dataset):
 	np.random.shuffle(imgIDs)
 	dataset = dataset[:,:,:,:,imgIDs]
 
-	train_data = dataset[:,:,:,:,:n_train_img]
-	val_data = dataset[:,:,:,:,n_train_img+1:n_train_img+n_val_img]
-	test_data = dataset[:,:,:,:,n_train_img+n_val_img+1:]
+	# Split patient files into train/val/test data
+	train_data 	= dataset[:,						:n_train_img,			 :,:,:]
+	val_data 	= dataset[:,n_train_img+1 			:n_train_img + n_val_img,:,:,:]
+	test_data 	= dataset[:,n_train_img+n_val_img+1 :,						 :,:,:]
 
 
 
@@ -369,9 +378,9 @@ def split_into_groups_and_save(dataset_name, dataset):
 
 	path = os.path.join(cfg.local_data_root, "preprocessed_data/")
 	Path(path).mkdir(parents=True, exist_ok=True)
-	np.savez(path+dataset_name+"-preprocessed.npz", train_data=train_data, val_data=val_data, test_data=test_data)
+	np.savez(path+dataset_name+"%s-preprocessed.npz"%(str(cfg.image_shape)), train_data=train_data, val_data=val_data, test_data=test_data)
 
-	if cfg.verbose: print("Saved train/val/test data as %s"%path+dataset_name+"-preprocessed.npz")
+	if cfg.verbose: print("Saved train/val/test data as %s"%path+dataset_name+"%s-preprocessed.npz"%(str(cfg.image_shape)))
 	if cfg.verbose: print(train_data.shape, val_data.shape, test_data.shape)
 
 

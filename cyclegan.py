@@ -13,10 +13,10 @@ class CycleGan(keras.Model):
         generator_F,
         discriminator_X,
         discriminator_Y,
-        lambda_cycle    = cfg.loss_weight_cfg[cfg.trial_settings["loss_weights"]]["cycle"],         # Vanilla 10.0
-        lambda_identity = cfg.loss_weight_cfg[cfg.trial_settings["loss_weights"]]["identity"],      # Vanilla 0.5
-        lambda_gradient = cfg.loss_weight_cfg[cfg.trial_settings["loss_weights"]]["gradient"],      # From Dominiks Code
-        lambda_percept  = cfg.loss_weight_cfg[cfg.trial_settings["loss_weights"]]["perception"]     # From Dominiks Code
+        lambda_cycle    = cfg.loss_weight_cfg[cfg.trial_data["loss_weights"]]["cycle"],         # Vanilla 10.0
+        lambda_identity = cfg.loss_weight_cfg[cfg.trial_data["loss_weights"]]["identity"],      # Vanilla 0.5
+        lambda_gradient = cfg.loss_weight_cfg[cfg.trial_data["loss_weights"]]["gradient"],      # From Dominiks Code
+        lambda_percept  = cfg.loss_weight_cfg[cfg.trial_data["loss_weights"]]["perception"]     # From Dominiks Code
     ):
         super(CycleGan, self).__init__()
         self.gen_G = generator_G
