@@ -56,10 +56,11 @@ for dataset_pair_names in cfg.dataset_pairs:
 							if cfg.verbose: print("\n== Loading %s dataset ==\n"%(dataset_name))
 							if not check_if_preprocessed(dataset_name) or cfg.preprocess:
 								# Data/Labels in shape (files, img_dim, img_dim, n_imgs)
-								data, labels = load_data(dataset_name, n_data = 3)
+								data, labels = load_data(dataset_name, n_data = cfg.n_files)
 								data, labels = preprocess(data, labels, size = cfg.image_shape[0])
 
-								# show_np_data(data, labels)
+								if cfg.visualize_data:
+									show_np_data(data, labels)
 
 								# Dataset in shape (channel, img_dim, img_dim, n_imgs)
 								# channel 1: data
@@ -89,7 +90,8 @@ for dataset_pair_names in cfg.dataset_pairs:
 							np_val_datasets.append(val_data)
 							np_test_datasets.append(test_data)
 
-							# show_np_data(train_data, train_labels)
+							if cfg.visualize_data:
+								show_np_data(train_data, train_labels)
 
 							train_dataset = tf.data.Dataset.from_tensor_slices(train_data)
 							val_dataset = tf.data.Dataset.from_tensor_slices(val_data)
@@ -102,12 +104,13 @@ for dataset_pair_names in cfg.dataset_pairs:
 							test_datasets.append(test_dataset)
 
 						# Define folder coding
-						coding = "G%02d-F%02d-M%02d-L%02d-I%03d-E%03d" % (cfg.all_datasets[dataset_pair_names[0]]["ID"], 
-																		  cfg.all_datasets[dataset_pair_names[1]]["ID"], \
-																	      cfg.models_cfg[model_name]["ID"], 
-																	      cfg.loss_weight_cfg[loss_weights_number]["ID"], 
-																	      cfg.image_shape[0], 
-																	      cfg.n_epochs)
+						coding = "G%02d-F%02d-M%02d-L%02d-I%03d-C%03d-E%03d" % (cfg.all_datasets[dataset_pair_names[0]]["ID"], 
+																			    cfg.all_datasets[dataset_pair_names[1]]["ID"], \
+																		        cfg.models_cfg[model_name]["ID"], 
+																		        cfg.loss_weight_cfg[loss_weights_number]["ID"], 
+																		        cfg.image_shape[0], 
+																		        cfg.image_count,
+																		        cfg.n_epochs)
 
 						# Needed for both training and testing!
 						model_save_path = os.path.join(cfg.output_root,"final_models/",coding)

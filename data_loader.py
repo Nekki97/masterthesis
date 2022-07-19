@@ -37,6 +37,9 @@ def load_data(dataset_name, n_data):
 		label_filenames = [f for f in glob.glob(path+"_masks"+"/*"+label_filetype)]
 		if cfg.verbose: print("Found %d %s label files!"%(len(label_filenames), label_filetype))
 
+	if n_data == 0:
+		n_data = len(filenames)
+
 	# Load data
 	data = []
 	labels = []
@@ -69,7 +72,6 @@ def load_data(dataset_name, n_data):
 		labels = [labels[i][:,:,:min_n_imgs] for i in range(len(labels))]
 
 
-
 	# Make image size equal by adding zeros to all smaller than the largest
 	max_width  = np.max([data[i].shape[0] for i in range(len(data))])
 	max_height = np.max([data[i].shape[1] for i in range(len(data))])
@@ -77,11 +79,14 @@ def load_data(dataset_name, n_data):
 		max_width  = max(max_width,  np.max([labels[i].shape[0] for i in range(len(data))]))
 		max_height = max(max_height, np.max([labels[i].shape[1] for i in range(len(data))]))
 
-	new_data = np.zeros((len(data), max_width, max_height, min_n_imgs))
+	# Make the minimum pixel value the default, as it can be negative --> zero wouldnt be the smallest
+	min_pixel_val = min([np.min(data[i]) for i in range(len(data))])
+	new_data = np.ones((len(data), max_width, max_height, min_n_imgs))*min_pixel_val
 	new_labels = []
 
 	if has_labels:
-		new_labels = np.zeros((len(data), max_width, max_height, min_n_imgs))
+		min_pixel_val = min([np.min(labels[i]) for i in range(len(data))])
+		new_labels = np.ones((len(data), max_width, max_height, min_n_imgs))*min_pixel_val
 	for ID in range(len(data)):
 		img = data[ID]
 		if has_labels:
@@ -165,9 +170,14 @@ def preprocess(data, labels=[], size=0):
 
 			# Normalize image (if padding with nans instead of zeros use nanmin and nanmax)
 			# Normalize to [0,1]
-			image = (image-np.min(image))/(np.max(image)-np.min(image))
+			if cfg.normalization_cfg[cfg.normalization_ID][0] == 0:
+				image = (image-np.min(image))/(np.max(image)-np.min(image))
+				pad_val = 0 # new min value to pad with 
+			
 			# Normalize to [-1,1]
-			image = 2*np.ones_like(image)*(image-np.min(image))/(np.max(image)-np.min(image))-np.ones_like(image)
+			elif cfg.normalization_cfg[cfg.normalization_ID][0] == -1:
+				image = 2*np.ones_like(image)*(image-np.min(image))/(np.max(image)-np.min(image))-np.ones_like(image)
+				pad_val = -1 # new min value to pad with
 
 
 			# Crop image (if padding with nans instead of zeros use nansum)
@@ -186,17 +196,17 @@ def preprocess(data, labels=[], size=0):
 			diff = np.abs(image.shape[0]-image.shape[1])
 			pad_dim = image.shape[0] > image.shape[1]
 
-			image = np.pad(image, (((pad_dim==0)*(diff//2+diff%2), (pad_dim==0)*diff//2),((pad_dim==1)*(diff//2+diff%2), (pad_dim==1)*diff//2)))
+			image = np.pad(image, (((pad_dim==0)*(diff//2+diff%2), (pad_dim==0)*diff//2),((pad_dim==1)*(diff//2+diff%2), (pad_dim==1)*diff//2)), mode="constant", constant_values=pad_val)
 			if _has_labels:
-				label = np.pad(label, (((pad_dim==0)*(diff//2+diff%2), (pad_dim==0)*diff//2),((pad_dim==1)*(diff//2+diff%2), (pad_dim==1)*diff//2)))
+				label = np.pad(label, (((pad_dim==0)*(diff//2+diff%2), (pad_dim==0)*diff//2),((pad_dim==1)*(diff//2+diff%2), (pad_dim==1)*diff//2)), mode="constant", constant_values=pad_val)
 
 
 			# Pad to common size for dataset by padding or cropping
 			diff = pad_to_size-image.shape[0]
 			if diff>0:
-				image = np.pad(image, (((diff//2+diff%2), diff//2),((diff//2+diff%2), diff//2)))
+				image = np.pad(image, (((diff//2+diff%2), diff//2),((diff//2+diff%2), diff//2)), mode="constant", constant_values=pad_val)
 				if _has_labels:
-					label = np.pad(label, (((diff//2+diff%2), diff//2),((diff//2+diff%2), diff//2)))
+					label = np.pad(label, (((diff//2+diff%2), diff//2),((diff//2+diff%2), diff//2)), mode="constant", constant_values=pad_val)
 			else:
 				# If True --> randomly crop image
 				if cfg.randomly_crop:

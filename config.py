@@ -11,6 +11,10 @@ output_root		= root+"Output/"
 
 test_frac = 0.2
 val_frac = 0.2
+normalization_ID = "1"
+
+normalization_cfg = {"1" : [0,1],
+					 "2" : [-1,1]}
 
 all_datasets = {"XCAT_liver": 				{"ID"			: 1,
 											"name"			: "XCAT_liver",
@@ -78,41 +82,56 @@ loss_weight_cfg = {"1":{"ID":1,"cycle":10,"identity":0.5,"gradient":0,  "percept
 			   	   "5":{"ID":6,"cycle":10,"identity":10,  "gradient":0,  "perception":0}}
 
 ########################################## Training Parameters #########################################
-batch_size 			= 2
+batch_size 			= 1
+
 # samples_per_volume = 4
+
 n_epochs 			= 100
-image_count 		= 200 # 0 for all available
+
+# How many different files to read out data from (will be cut down to an equal amount of each file for max. generalizability)
+n_files 			= 0 	# 0 for all available (56 XCAT models)
+
+# Total image count in training dataset (steps per epoch = imagecount / batchsize) 
+# --> keras automatically stops when one dataset runs out of data => image_count = 0 means train until smaller dataset runs out
+image_count 		= 100 	# 0 for all available
 
 # !!! when changing make sure preprocess is True !!! 
-image_shape 		= [128, 128, 1] # data input shape
+image_shape 		= [256, 256, 1] # data input shape
 
-save_period 		= 5
+
+save_period 		= 5 	# Save model and generate images every x epochs
 
 
 verbose 			= True
 
-preprocess			= True	# if False, takes saved preprocessed data
+# Takes very long if all files are loaded, load files once and then use the generated preprocessed dataset by setting this to False
+preprocess			= False	# if False, takes saved preprocessed data
+
 augment 			= False # Does nothing rn
 
-visualize_data 		= True
+visualize_data 		= False # Visualize sample data before training, needs user input to continue (otherwise everything runs alone)
 train 				= True
 test 				= True
 
 ########################################## Loop Configurations #########################################
 
 # Gen F generates first in pair, Gen G generates second in pair
-dataset_pairs 			= [["postVIBE_XCAT", 		"patient_liver_nrrd"]]
-						   #["Dominik_XCAT_liver", 	"patient_liver_nrrd"]]
+# Put the dataset with labels in first place
+# TODO: make so it doesnt matter in which position the labelled one is 
+dataset_pairs 			= [["postVIBE_XCAT", "patient_liver_nrrd"]]
+						  #["Dominik_XCAT_liver", 	"patient_liver_nrrd"]]
 # generator_losses 		= ["comb"]
-models 					= ["DominikCycleGAN", "AdvancedCycleGAN"]
-loss_weights			= ["2", "1"]
+models 					= ["DominikCycleGAN"]
+loss_weights			= ["2"]
 
 # augmentation_strategies = ["gaussian_noise_only"]
 
 # TODO: make list of trial configuration --> run one by one for better customizability
 
 # All data will be saved in folder named:
-trial_name 				= "test_single_channel"
+trial_name 				= "more_tests"
+
+# TODO: write "-2" in folder name if folder already exists
 
 
 ########################################################################################################
