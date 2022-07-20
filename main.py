@@ -71,7 +71,7 @@ for dataset_pair_names in cfg.dataset_pairs:
 							else:
 								if cfg.verbose: print("Found preprocessed data!\n")
 
-							load_path = os.path.join(cfg.local_data_root, "preprocessed_data", dataset_name+"-preprocessed.npz")
+							load_path = os.path.join(cfg.local_data_root, "preprocessed_data", dataset_name+"%s-preprocessed.npz"%(str(cfg.image_shape)))
 							with np.load(load_path) as data:
 								train_data_temp = data['train_data']
 								val_data_temp 	= data['val_data']
@@ -83,6 +83,7 @@ for dataset_pair_names in cfg.dataset_pairs:
 								train_data_temp = train_data_temp[:cfg.image_count,:,:,:]
 
 							train_data 	= np.expand_dims(train_data_temp[:,:,:,0],axis=3)
+							train_label = np.expand_dims(train_data_temp[:,:,:,1],axis=3)
 							val_data 	= np.expand_dims(val_data_temp[:,:,:,0]	,axis=3)
 							val_label 	= np.expand_dims(val_data_temp[:,:,:,1]	,axis=3)
 
@@ -91,7 +92,7 @@ for dataset_pair_names in cfg.dataset_pairs:
 							np_test_datasets.append(test_data)
 
 							if cfg.visualize_data:
-								show_np_data(train_data, train_labels)
+								show_np_data(train_data, train_label)
 
 							train_dataset = tf.data.Dataset.from_tensor_slices(train_data)
 							val_dataset = tf.data.Dataset.from_tensor_slices(val_data)

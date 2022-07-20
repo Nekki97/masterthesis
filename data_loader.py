@@ -47,22 +47,30 @@ def load_data(dataset_name, n_data):
 		if i+1>n_data:
 			continue
 
-		image = sitk.ReadImage(filename)
+		image_series = sitk.ReadImage(filename)
 
 		if has_labels:
 
 			# TODO: write target spacing to which all images are normed
 
-			label = sitk.ReadImage(label_filenames[i])
-			label.SetSpacing(image.GetSpacing())
-			label.SetOrigin(image.GetOrigin())
-			label.SetDirection(image.GetDirection())
+			label_series = sitk.ReadImage(label_filenames[i])
+			label_series.SetSpacing(image_series.GetSpacing())
+			label_series.SetOrigin(image_series.GetOrigin())
+			label_series.SetDirection(image_series.GetDirection())
 
-			label = np.moveaxis(sitk.GetArrayFromImage(label),0,-1)
-			labels.append(label)
+			label_series = np.moveaxis(sitk.GetArrayFromImage(label_series),0,-1)
 
-		image = np.moveaxis(sitk.GetArrayFromImage(image),0,-1)
-		data.append(image)
+		image_series = np.moveaxis(sitk.GetArrayFromImage(image_series),0,-1)
+
+		if has_labels:
+			if np.array_equal(label_series[:,:,20],image_series[:,:,20]):
+				for k, modelnumber in enumerate(list(cfg.organ_mask_vals[cfg.xcat_organ_mask].keys())):
+					if modelnumber in label_filenames[i]:
+						organ_val = list(cfg.organ_mask_vals[cfg.xcat_organ_mask].items())[k][1]
+						label_series = np.where(np.round(label_series,3) == organ_val, 1.0, 0.0) # organ_val has 3 decimal places while the loaded image has 6
+			labels.append(label_series)
+
+		data.append(image_series)
 
 
 	# Cut off n_imgs to be equal over all files
@@ -96,8 +104,6 @@ def load_data(dataset_name, n_data):
 		if has_labels:
 			new_labels[ID, :label.shape[0],:label.shape[1],:] = label
 
-
-
 	if cfg.verbose: print("Loaded %d files!\n%s\n"%(n_data,str(new_data.shape)))
 	return new_data, new_labels
 
@@ -110,11 +116,11 @@ def preprocess(data, labels=[], size=0):
 	# OR Pad to set size
 
 	# If you want to view some sample images before and after preprocessing
-	_view_sample_img = False
-	_view_img_number = 20
+	_view_sample_img = True
+	_view_img_number = 0
 
 	# Min amount of images per file
-	_min_img_count = 1000 # ignore
+	_min_img_count = 1000 # ignore, used
 
 	_has_labels = len(labels)>0
 
@@ -141,13 +147,12 @@ def preprocess(data, labels=[], size=0):
 				label = labels[fileID,:,:,imgID]
 
 			# Skip image if empty
-			if np.sum(image) == 0.0:
+			if np.sum(np.square(image)) == 0.0:
 				continue
 
 			# Threshold labels and skip if empty
 			if _has_labels:
-				label[label>=0.5] = 1.0
-				label[label<0.5] = 0.0
+				label = np.where(label>=0.5, 1.0, 0.0)
 				if np.sum(label) == 0.0:
 					continue
 
@@ -159,13 +164,12 @@ def preprocess(data, labels=[], size=0):
 					plt.subplot(2,2,2)
 					plt.imshow(label, cmap="gray")
 
-
 			# Clip image
 			image = np.clip(image, np.percentile(image, 5), np.percentile(image, 95))
 
-
+			
 			# Skip image if empty (might happen after clipping)
-			if np.sum(image) == 0.0:
+			if np.sum(np.square(image)) == 0.0:
 				continue
 
 			# Normalize image (if padding with nans instead of zeros use nanmin and nanmax)
@@ -191,6 +195,7 @@ def preprocess(data, labels=[], size=0):
 			image = temp_image[dim_1_mask,:]
 			if _has_labels:
 				label = label[dim_1_mask,:]
+
 
 			# Pad to be square
 			diff = np.abs(image.shape[0]-image.shape[1])
@@ -241,7 +246,6 @@ def preprocess(data, labels=[], size=0):
 					if _has_labels:
 						label = label[center-pad_to_size//2+pad_to_size%2 : center+extra+pad_to_size//2, center-pad_to_size//2+pad_to_size%2 : center+extra+pad_to_size//2]
 
-
 			# View sample image after preprocessing
 			if _view_sample_img and imgID == _view_img_number:
 				plt.subplot(2,2,3)
@@ -263,6 +267,7 @@ def preprocess(data, labels=[], size=0):
 				if _has_labels:
 					for aug_lbl in augmented_labels:
 						processed_labels.append(aug_lbl)
+
 
 		# print([processed_images[i].shape for i in range(len(processed_images))])
 		processed_images = np.array(processed_images)
@@ -332,9 +337,9 @@ def split_into_groups_and_save(dataset_name, dataset):
 	# Shuffle files and images to prevent e.g. test having only the lower half
 	# Get all imgs of all files into one dim
 
-	n_test_img = int(dataset.shape[-1]*cfg.test_frac)
-	n_val_img = int(dataset.shape[-1]*cfg.val_frac)
-	n_train_img = int(dataset.shape[-1] - n_test_img - n_val_img)
+	n_test_img = max(1,int(dataset.shape[1]*cfg.test_frac))
+	n_val_img = max(1,int(dataset.shape[1]*cfg.val_frac))
+	n_train_img = max(1,int(dataset.shape[1] - n_test_img - n_val_img))
 
 	fileIDs = np.arange(dataset.shape[1])
 	np.random.shuffle(fileIDs)
@@ -344,9 +349,9 @@ def split_into_groups_and_save(dataset_name, dataset):
 	np.random.shuffle(imgIDs)
 	dataset = dataset[:,:,:,:,imgIDs]
 
-	train_data = dataset[:,:,:,:,:n_train_img]
-	val_data = dataset[:,:,:,:,n_train_img+1:n_train_img+n_val_img]
-	test_data = dataset[:,:,:,:,n_train_img+n_val_img+1:]
+	train_data = dataset[:,:n_train_img,:,:,:]
+	val_data = dataset[:,n_train_img+1:n_train_img+n_val_img,:,:,:]
+	test_data = dataset[:,n_train_img+n_val_img+1:,:,:,:]
 
 
 
@@ -369,9 +374,9 @@ def split_into_groups_and_save(dataset_name, dataset):
 
 	path = os.path.join(cfg.local_data_root, "preprocessed_data/")
 	Path(path).mkdir(parents=True, exist_ok=True)
-	np.savez(path+dataset_name+"-preprocessed.npz", train_data=train_data, val_data=val_data, test_data=test_data)
+	np.savez(path+dataset_name+"%s-preprocessed.npz"%(str(cfg.image_shape)), train_data=train_data, val_data=val_data, test_data=test_data)
 
-	if cfg.verbose: print("Saved train/val/test data as %s"%path+dataset_name+"-preprocessed.npz")
+	if cfg.verbose: print("Saved train/val/test data as %s"%path+dataset_name+"%s-preprocessed.npz"%(str(cfg.image_shape)))
 	if cfg.verbose: print(train_data.shape, val_data.shape, test_data.shape)
 
 
