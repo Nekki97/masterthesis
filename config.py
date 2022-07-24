@@ -153,8 +153,21 @@ organ_mask_vals = 	{"liver" 		: {"Model71": 5.147,"Model76": 5.115,"Model77": 4.
 					 "left_kidney" 	: {}}
 
 
-# git add .
-# git commit -m "message"
-# git push -u origin single_channel
+'''
+git add .
+git commit -m "message"
+git push -u origin single_channel
 
-# git switch -c newbranchname
+git switch -c newbranchname
+git checkout branchname
+
+
+
+overwrite branchA with branchB:
+
+git checkout branchB
+git merge -s ours branchA
+git checkout branchA
+git merge branchB
+
+'''
