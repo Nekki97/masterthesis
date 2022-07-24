@@ -123,7 +123,7 @@ def preprocess(data, labels=[], size=0):
 	# OR Pad to set size
 
 	# If you want to view some sample images before and after preprocessing
-	_view_sample_img = True
+	_view_sample_img = False
 	_view_img_number = 0
 
 	# Min amount of images per file

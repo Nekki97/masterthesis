@@ -68,26 +68,18 @@ class NEWGANMonitor(keras.callbacks.Callback):
 						ax[3, i].set_title("Translated label")
 						ax[3, i].axis("off")
 
-						# thrsh_label_pred = np.copy(label_prediction)
-						# thrsh_label_pred[thrsh_label_pred>0.5] = 1
-						# thrsh_label_pred[thrsh_label_pred<=0.5] = 0
-		
-						# if k==0: ax[4, i].imshow(thrsh_label_pred, cmap='gray')
-						# ax[4, i].set_title("Thresholded translated label")
-						# ax[4, i].axis("off")
-
 					folder_path = os.path.join(self.path,"epoch_%03d"%(epoch+1))
 					Path(folder_path+"/_generated_data").mkdir(parents=True, exist_ok=True)
 
 					if k==0: 
 						fig.savefig(os.path.join(folder_path,"_generated_data",'genG_after_%03d-of-%03d_epochs.png'%(epoch+1, cfg.n_epochs)))
 						np.savez(os.path.join(folder_path,"_generated_data",'genG_after_%03d-of-%03d_epochs.npz'%(epoch+1, cfg.n_epochs)), \
-							input_img=img, input_label=label, output_img=img_prediction, output_label=label_prediction)#, thresh_out_label=thrsh_label_pred)
+							input_img=img, input_label=label, output_img=img_prediction, output_label=label_prediction)
 
 					if k==1: 
 						fig.savefig(os.path.join(folder_path,"_generated_data",'genF_after_%03d-of-%03d_epochs.png'%(epoch+1, cfg.n_epochs)))
 						np.savez(os.path.join(folder_path,"_generated_data",'genF_after_%03d-of-%03d_epochs.npz'%(epoch+1, cfg.n_epochs)), \
-							input_img=img, input_label=label, output_img=img_prediction, output_label=label_prediction)#, thresh_out_label=thrsh_label_pred)
+							input_img=img, input_label=label, output_img=img_prediction, output_label=label_prediction)
 					plt.close(fig)
 
 
@@ -157,21 +149,12 @@ def new_generate_data(model_save_path, test_datasets, n_gen_imgs=1):
 
 						ax[5+rows_per_set*(i//cols), i%cols].axis("off")
 
-						# thrsh_label_pred = np.copy(label_prediction)
-						# thrsh_label_pred[thrsh_label_pred>0.5] = 1
-						# thrsh_label_pred[thrsh_label_pred<=0.5] = 0
-
-						# if k==0: ax[5+rows_per_set*(i//cols), i%cols].imshow(thrsh_label_pred, cmap='gray')
-						# ax[5+rows_per_set*(i//cols), i%cols].set_title("Thresholded translated label")
-						# ax[5+rows_per_set*(i//cols), i%cols].axis("off")
-
-
 					Path(model_save_path+"/_generated_data").mkdir(parents=True, exist_ok=True)
 
 					path = os.path.join(model_save_path,"_generated_data",filename)
 					fig.savefig(path)#, bbox_inches='tight')
 				
-					np.savez(path[:-3]+'npz',input_img=img, output_img=img_prediction, input_label=label, output_label=label_prediction)#, thresh_out_label=thrsh_label_pred)
+					np.savez(path[:-3]+'npz',input_img=img, output_img=img_prediction, input_label=label, output_label=label_prediction)
 					
 					if cfg.verbose: print("Generated data saved as: %s"%(filename))
 					plt.close(fig)
@@ -273,3 +256,14 @@ def get_model(training):
 			    gen_loss_fn=generator_loss_fn,
 			    disc_loss_fn=discriminator_loss_fn)
 	return model
+
+
+def get_available_checkpoint_path(coding):
+	# Make sure folders are not overwritten if the coding is the same 
+	idx = 1
+	checkpoint_filepath = os.path.join(cfg.output_root,"model_checkpoints",coding+"-%02d"%(idx))
+	while os.path.isdir(checkpoint_filepath):
+		idx += 1
+		checkpoint_filepath = os.path.join(cfg.output_root,"model_checkpoints",coding+"-%02d"%(idx))
+	Path(checkpoint_filepath).mkdir(parents=True, exist_ok=True)
+	return checkpoint_filepath

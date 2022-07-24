@@ -22,181 +22,178 @@ Path(cfg.output_root).mkdir(parents=True, exist_ok=True)
 physical_devices = tf.config.list_physical_devices('GPU') 
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-for dataset_pair_names in cfg.dataset_pairs:
-	for model_name 		in cfg.models:
-		for loss_weights_number in cfg.loss_weights:
-			while True:
-				try:
+for trialID in list(cfg.loop_settings.keys()):
+	model_name = cfg.loop_settings[trialID]["model_name"]
+	loss_weights_ID = cfg.loop_settings[trialID]["loss_weights_ID"]
+	while True:
+		try:
 
-					# Configure current for loop model settings
-					cfg.trial_settings = {"modelname"			: model_name,
-									  	  "steps_per_epoch"		: 0,
-									  	  "training_img_shapes"	: [],
-									  	  "loss_weights"		: loss_weights_number}
+			# Configure current for loop model settings
+			cfg.trial_settings = {"modelname"			: model_name,
+							  	  "steps_per_epoch"		: 0,
+							  	  "training_img_shapes"	: [],
+							  	  "loss_weights"		: loss_weights_ID}
+			
+			tf.keras.backend.clear_session()
 
-									  	  # "g_lossID"			: cfg.generator_loss_options[generator_loss]["ID"],
-									  	  # "g_loss"				: generator_loss,
+			################################################# GET DATA #############################################
+			with tf.device('/CPU:0'):
+				train_datasets = []
+				val_datasets = []
+				val_labels_sets = []
+				test_datasets = []
 
-					
-					tf.keras.backend.clear_session()
+				np_train_datasets = []
+				np_val_datasets = []
+				np_test_datasets = []
 
-					################################################# GET DATA #############################################
-					with tf.device('/CPU:0'):
-						train_datasets = []
-						val_datasets = []
-						val_labels_sets = []
-						test_datasets = []
+				for dataset_name in [cfg.xcat_dataset_name, cfg.patient_dataset_name]:
+					if cfg.verbose: print("\n== Loading %s dataset ==\n"%(dataset_name))
+					if not check_if_preprocessed(dataset_name) or cfg.preprocess:
+						# Data/Labels in shape (files, img_dim, img_dim, n_imgs)
+						data, labels = load_data(dataset_name, n_data = cfg.n_files)
+						data, labels = preprocess(data, labels, size = cfg.image_shape[0])
 
-						np_train_datasets = []
-						np_val_datasets = []
-						np_test_datasets = []
+						if cfg.visualize_data:
+							show_np_data(data, labels, preprocessed=False)
 
-						for dataset_name in dataset_pair_names:
-							if cfg.verbose: print("\n== Loading %s dataset ==\n"%(dataset_name))
-							if not check_if_preprocessed(dataset_name) or cfg.preprocess:
-								# Data/Labels in shape (files, img_dim, img_dim, n_imgs)
-								data, labels = load_data(dataset_name, n_data = cfg.n_files)
-								data, labels = preprocess(data, labels, size = cfg.image_shape[0])
+						# Dataset in shape (channel, img_dim, img_dim, n_imgs)
+						# channel 1: data
+						# (channel 2: labels) if labels exist
+						dataset = combine_data(data, labels)
 
-								if cfg.visualize_data:
-									show_np_data(data, labels, preprocessed=False)
+						split_into_groups_and_save(dataset_name, dataset)
+					else:
+						if cfg.verbose: print("Found preprocessed data!\n")
 
-								# Dataset in shape (channel, img_dim, img_dim, n_imgs)
-								# channel 1: data
-								# (channel 2: labels) if labels exist
-								dataset = combine_data(data, labels)
-
-								split_into_groups_and_save(dataset_name, dataset)
-							else:
-								if cfg.verbose: print("Found preprocessed data!\n")
-
-							if cfg.verbose: print("Loading preprocessed data!\n")
-							load_path = os.path.join(cfg.local_data_root, "preprocessed_data", dataset_name+"%s-%d-preprocessed.npz"%(str(cfg.image_shape), cfg.n_files))
-							with np.load(load_path) as data:
-								train_data_temp = data['train_data']
-								val_data_temp 	= data['val_data']
-								test_data 		= data['test_data']
+					if cfg.verbose: print("Loading preprocessed data!\n")
+					load_path = os.path.join(cfg.local_data_root, "preprocessed_data", dataset_name+"%s-%d-preprocessed.npz"%(str(cfg.image_shape), cfg.n_files))
+					with np.load(load_path) as data:
+						train_data_temp = data['train_data']
+						val_data_temp 	= data['val_data']
+						test_data 		= data['test_data']
 
 
-							# Limit training data for various time-saving reasons
-							if cfg.image_count > 0:
-								train_data_temp = train_data_temp[:cfg.image_count,:,:,:]
+					# Limit training data for various time-saving reasons
+					if cfg.image_count > 0:
+						train_data_temp = train_data_temp[:cfg.image_count,:,:,:]
 
-							train_data 	= np.expand_dims(train_data_temp[:,:,:,0],axis=3)
-							train_label = np.expand_dims(train_data_temp[:,:,:,1],axis=3)
-							val_data 	= np.expand_dims(val_data_temp[:,:,:,0]	,axis=3)
-							val_label 	= np.expand_dims(val_data_temp[:,:,:,1]	,axis=3)
+					train_data 	= np.expand_dims(train_data_temp[:,:,:,0],axis=3)
+					train_label = np.expand_dims(train_data_temp[:,:,:,1],axis=3)
+					val_data 	= np.expand_dims(val_data_temp[:,:,:,0]	,axis=3)
+					val_label 	= np.expand_dims(val_data_temp[:,:,:,1]	,axis=3)
 
-							np_train_datasets.append(train_data)
-							np_val_datasets.append(val_data)
-							np_test_datasets.append(test_data)
+					np_train_datasets.append(train_data)
+					np_val_datasets.append(val_data)
+					np_test_datasets.append(test_data)
 
-							if cfg.visualize_data:
-								show_np_data(train_data, train_label, preprocessed=True)
+					if cfg.visualize_data:
+						show_np_data(train_data, train_label, preprocessed=True)
 
-							train_dataset 	= tf.data.Dataset.from_tensor_slices(train_data)
-							val_dataset 	= tf.data.Dataset.from_tensor_slices(val_data)
-							val_labels 		= tf.data.Dataset.from_tensor_slices(val_label)
-							test_dataset 	= tf.data.Dataset.from_tensor_slices(test_data)
+					train_dataset 	= tf.data.Dataset.from_tensor_slices(train_data)
+					val_dataset 	= tf.data.Dataset.from_tensor_slices(val_data)
+					val_labels 		= tf.data.Dataset.from_tensor_slices(val_label)
+					test_dataset 	= tf.data.Dataset.from_tensor_slices(test_data)
 
-							train_datasets.append(train_dataset)
-							val_datasets.append(val_dataset)
-							val_labels_sets.append(val_labels)
-							test_datasets.append(test_dataset)
+					train_datasets.append(train_dataset)
+					val_datasets.append(val_dataset)
+					val_labels_sets.append(val_labels)
+					test_datasets.append(test_dataset)
 
-						# Define folder coding
-						coding = "G%02d-F%02d-M%02d-L%02d-I%03d-C%03d-E%03d" % (cfg.all_datasets[dataset_pair_names[0]]["ID"], 
-																			    cfg.all_datasets[dataset_pair_names[1]]["ID"], \
-																		        cfg.models_cfg[model_name]["ID"], 
-																		        cfg.loss_weight_cfg[loss_weights_number]["ID"], 
-																		        cfg.image_shape[0], 
-																		        cfg.image_count,
-																		        cfg.n_epochs)
+				# Define folder coding
+				coding = "G%02d-F%02d-M%02d-L%02d-I%03d-C%03d-E%03d" % (cfg.all_datasets[cfg.xcat_dataset_name]["ID"], 
+																	    cfg.all_datasets[cfg.patient_dataset_name]["ID"], \
+																        cfg.models_cfg[model_name]["ID"], 
+																        cfg.loss_weight_cfg[cfg.trial_settings["loss_weights"]]["ID"], 
+																        cfg.image_shape[0], 
+																        cfg.image_count,
+																        cfg.n_epochs)
 
-						# Needed for both training and testing!
-						model_save_path = os.path.join(cfg.output_root,"final_models/",coding)
-						Path(model_save_path).mkdir(parents=True, exist_ok=True)
-
-
-					################################################# TRAINING #############################################
-					if cfg.train:
-						
-						cfg.trial_settings["training_img_shapes"] = [np_train_datasets[0].shape, np_train_datasets[1].shape]
-						cfg.trial_settings["steps_per_epoch"] = min(np_train_datasets[0].shape[0], np_train_datasets[1].shape[0]) // cfg.batch_size
-
-						batched_train_datasets = [train_datasets[0].batch(cfg.batch_size), \
-											  	  train_datasets[1].batch(cfg.batch_size)]
+				# Needed for both training and testing!
+				model_save_path = os.path.join(cfg.output_root,"final_models/",coding)
+				Path(model_save_path).mkdir(parents=True, exist_ok=True)
 
 
-			  	  		#tf.random.set_seed(1)
-						batched_val_datasets = [val_datasets[0].batch(cfg.batch_size), \
-											    val_datasets[1].batch(cfg.batch_size)]
+			################################################# TRAINING #############################################
+			if cfg.train:
+				
+				cfg.trial_settings["training_img_shapes"] = [np_train_datasets[0].shape, np_train_datasets[1].shape]
+				cfg.trial_settings["steps_per_epoch"] = min(np_train_datasets[0].shape[0], np_train_datasets[1].shape[0]) // cfg.batch_size
 
-			    		#tf.random.set_seed(1)
-						batched_val_labels = [val_labels_sets[0].batch(cfg.batch_size), \
-										      val_labels_sets[1].batch(cfg.batch_size)]
+				batched_train_datasets = [train_datasets[0].batch(cfg.batch_size), \
+									  	  train_datasets[1].batch(cfg.batch_size)]
 
-						plt.figure()
-						plt.subplot(2,1,1)
-						plt.imshow(batched_val_datasets[0].take(1))
-						plt.subplot(2,1,2)
-						plt.imshow(batched_val_labels[0].take(1))
-						plt.show()
 
-						# Call model according to settings
-						model = get_model(training=True)
+	  	  		#tf.random.set_seed(1)
+				batched_val_datasets = [val_datasets[0].batch(cfg.batch_size), \
+									    val_datasets[1].batch(cfg.batch_size)]
 
-						# Define Callback
-						checkpoint_filepath = os.path.join(cfg.output_root,"model_checkpoints",coding)
-						Path(checkpoint_filepath).mkdir(parents=True, exist_ok=True)
-						model_checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath+"/epoch_{epoch:03d}/checkpoint_file_{epoch:03d}", verbose=1, save_weights_only=True, save_freq=int(cfg.save_period*cfg.trial_settings["steps_per_epoch"]))
+	    		#tf.random.set_seed(1)
+				batched_val_labels = [val_labels_sets[0].batch(cfg.batch_size), \
+								      val_labels_sets[1].batch(cfg.batch_size)]
 
-						plotter = NEWGANMonitor(batched_val_datasets, batched_val_labels, checkpoint_filepath, num_img=8, period=cfg.save_period)
+				plt.figure()
+				plt.subplot(2,1,1)
+				val_img = list(batched_val_datasets[0].take(1).as_numpy_iterator())[0]
+				plt.imshow(val_img[0,:,:,0])
+				plt.subplot(2,1,2)
+				val_label = list(batched_val_labels[0].take(1).as_numpy_iterator())[0]
+				plt.imshow(val_label[0,:,:,0])
+				plt.show()
 
-						keras.callbacks.ProgbarLogger()
-						
-						Path(os.path.join(cfg.output_root,"logs")).mkdir(parents=True, exist_ok=True)
-						# Access with "tensorboard --logdir=logs" in cmd (path here is just "logs")
-						tensorboard = keras.callbacks.TensorBoard(log_dir=os.path.join(cfg.output_root,"logs"))
+				# Call model according to settings
+				model = get_model(training=True)
 
-						if cfg.verbose: print("Model input:\n", batched_train_datasets[0], "\n", batched_train_datasets[1], "\n")
-						if cfg.verbose: print("TRAINING START!")
+				# Define Callback
+				checkpoint_filepath = get_available_checkpoint_path(coding)
+				model_checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath+"/epoch_{epoch:03d}/checkpoint_file_{epoch:03d}", verbose=1, save_weights_only=True, save_freq=int(cfg.save_period*cfg.trial_settings["steps_per_epoch"]))
 
-						with tf.device('/device:GPU:0'):
-							history = model.fit(tf.data.Dataset.zip((batched_train_datasets[0], batched_train_datasets[1])),
-							    	  			epochs=cfg.n_epochs,
-										    	verbose=1,
-										    	callbacks=[model_checkpoint_callback, 
-										    			   plotter, 
-										    			   tensorboard],
-												validation_data=tf.data.Dataset.zip((batched_val_datasets[0], batched_val_datasets[1])),
-												steps_per_epoch=cfg.trial_settings["steps_per_epoch"])
+				plotter = NEWGANMonitor(batched_val_datasets, batched_val_labels, checkpoint_filepath, num_img=8, period=cfg.save_period)
 
-						with tf.device('/CPU:0'):
-							if cfg.verbose: print("\nSaving history data!")
-							np.save(checkpoint_filepath+"/history.npy", history.history)
-							# load using history = np.load('history.npy', allow_pickle='TRUE').item()
+				keras.callbacks.ProgbarLogger()
+				
+				Path(os.path.join(cfg.output_root,"logs")).mkdir(parents=True, exist_ok=True)
+				# Access with "tensorboard --logdir=logs" in cmd (path here is just "logs")
+				tensorboard = keras.callbacks.TensorBoard(log_dir=os.path.join(cfg.output_root,"logs"))
 
-							generate_loss_plots(model_save_path, history)
+				if cfg.verbose: print("Model input:\n", batched_train_datasets[0], "\n", batched_train_datasets[1], "\n")
+				if cfg.verbose: print("TRAINING START!")
 
-							if cfg.verbose: print("Saving model!")
-							Path(model_save_path+"/model/").mkdir(parents=True, exist_ok=True)
-							model.save(model_save_path+"/model/")
+				with tf.device('/device:GPU:0'):
+					history = model.fit(tf.data.Dataset.zip((batched_train_datasets[0], batched_train_datasets[1])),
+					    	  			epochs=cfg.n_epochs,
+								    	verbose=1,
+								    	callbacks=[model_checkpoint_callback, 
+								    			   plotter, 
+								    			   tensorboard],
+										validation_data=tf.data.Dataset.zip((batched_val_datasets[0], batched_val_datasets[1])),
+										steps_per_epoch=cfg.trial_settings["steps_per_epoch"])
 
-							if cfg.verbose: print("\nTraining finished!")
+				with tf.device('/CPU:0'):
+					if cfg.verbose: print("\nSaving history data!")
+					np.save(checkpoint_filepath+"/history.npy", history.history)
+					# load using history = np.load('history.npy', allow_pickle='TRUE').item()
+
+					generate_loss_plots(model_save_path, history)
+
+					if cfg.verbose: print("Saving model!")
+					Path(model_save_path+"/model/").mkdir(parents=True, exist_ok=True)
+					model.save(model_save_path+"/model/")
+
+					if cfg.verbose: print("\nTraining finished!")
 
 
 
-					################################################# TESTING ##############################################
-					with tf.device('/CPU:0'):
-						batched_test_datasets = [test_datasets[0].batch(cfg.batch_size), \
-											     test_datasets[1].batch(cfg.batch_size)]
-						if cfg.test:
-							new_generate_data(model_save_path, batched_test_datasets, n_gen_imgs=1)
+			################################################# TESTING ##############################################
+			with tf.device('/CPU:0'):
+				batched_test_datasets = [test_datasets[0].batch(cfg.batch_size), \
+									     test_datasets[1].batch(cfg.batch_size)]
+				if cfg.test:
+					new_generate_data(model_save_path, batched_test_datasets, n_gen_imgs=1)
 
-					########################################################################################################
+			########################################################################################################
 
-				except Exception:
-					traceback.print_exc()
-					continue
-				break
+		except Exception:
+			traceback.print_exc()
+			continue
+		break
