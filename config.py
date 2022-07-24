@@ -38,7 +38,7 @@ gamma_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 
 ########################################## Training Parameters #########################################
 batch_size 			= 1
-n_epochs 			= 5
+n_epochs 			= 1
 
 # How many different files to read out data from (will be cut down to an equal amount of each file for max. generalizability)
 n_files 			= 3 	# 0 for all available (56 XCAT models)
@@ -48,11 +48,11 @@ n_files 			= 3 	# 0 for all available (56 XCAT models)
 image_count 		= 5 	# 0 for all available
 
 # !!! when changing make sure preprocess is True !!! 
-image_shape 		= [64, 64, 1] # data input shape
+image_shape 		= [128, 128, 1] # data input shape
 save_period 		= 1 	# Save model and generate images every x epochs
 
 # Takes very long if all files are loaded, load files once and then use the generated preprocessed dataset by setting this to False
-preprocess			= True	# if False, takes saved preprocessed data
+preprocess			= False	# if False, takes saved preprocessed data
 verbose 			= True
 visualize_data 		= False # Visualize sample data before training, needs user input to continue (otherwise everything runs alone)
 train 				= True

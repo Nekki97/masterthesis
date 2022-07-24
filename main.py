@@ -132,14 +132,6 @@ for trialID in list(cfg.loop_settings.keys()):
 				batched_val_labels = [val_labels_sets[0].batch(cfg.batch_size), \
 								      val_labels_sets[1].batch(cfg.batch_size)]
 
-				plt.figure()
-				plt.subplot(2,1,1)
-				val_img = list(batched_val_datasets[0].take(1).as_numpy_iterator())[0]
-				plt.imshow(val_img[0,:,:,0])
-				plt.subplot(2,1,2)
-				val_label = list(batched_val_labels[0].take(1).as_numpy_iterator())[0]
-				plt.imshow(val_label[0,:,:,0])
-				plt.show()
 
 				# Call model according to settings
 				model = get_model(training=True)
