@@ -3,11 +3,15 @@ from cyclegan import *
 from discriminators import *
 from generators import *
 
-def show_np_data(data, labels):
+def show_np_data(data, labels, preprocessed = False):
 	if cfg.visualize_data:
+		if preprocessed:
+			data = np.moveaxis(np.moveaxis(data, -1, 0), 1, -1)
 		visualize_dataset(data)
 		if len(labels)>0:
- 			visualize_dataset(labels)
+			if preprocessed:
+				labels = np.moveaxis(np.moveaxis(labels, -1, 0), 1, -1)
+			visualize_dataset(labels)
 
 
 class NEWGANMonitor(keras.callbacks.Callback):
@@ -28,8 +32,8 @@ class NEWGANMonitor(keras.callbacks.Callback):
 				for k in range(2):
 					fig, ax = plt.subplots(4, self.num_img, figsize=(6*self.num_img, 6*4))
 
-					val_data_batch = self.val_data[k].take(self.num_img)
-					val_labels_batch = self.val_labels[k].take(self.num_img)
+					val_data_batch 		= self.val_data[k].take(self.num_img)
+					val_labels_batch 	= self.val_labels[k].take(self.num_img)
 					labels = list(enumerate(val_labels_batch))
 
 					for i, img in enumerate(val_data_batch):

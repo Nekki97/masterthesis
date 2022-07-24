@@ -14,20 +14,19 @@ from discriminators import *
 np.random.seed(1)
 tf.random.set_seed(1)
 
+assert cfg.n_files >= 3, "Not enough files to load and split into train/val/test"
+
 cfg.output_root += cfg.trial_name + "/"
 Path(cfg.output_root).mkdir(parents=True, exist_ok=True)
+
+physical_devices = tf.config.list_physical_devices('GPU') 
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 for dataset_pair_names in cfg.dataset_pairs:
 	for model_name 		in cfg.models:
 		for loss_weights_number in cfg.loss_weights:
 			while True:
 				try:
-					cuda.select_device(0)
-					cuda.close()
-
-					physical_devices = tf.config.list_physical_devices('GPU') 
-					tf.config.experimental.set_memory_growth(physical_devices[0], True)
-
 
 					# Configure current for loop model settings
 					cfg.trial_settings = {"modelname"			: model_name,
@@ -60,7 +59,7 @@ for dataset_pair_names in cfg.dataset_pairs:
 								data, labels = preprocess(data, labels, size = cfg.image_shape[0])
 
 								if cfg.visualize_data:
-									show_np_data(data, labels)
+									show_np_data(data, labels, preprocessed=False)
 
 								# Dataset in shape (channel, img_dim, img_dim, n_imgs)
 								# channel 1: data
@@ -71,7 +70,8 @@ for dataset_pair_names in cfg.dataset_pairs:
 							else:
 								if cfg.verbose: print("Found preprocessed data!\n")
 
-							load_path = os.path.join(cfg.local_data_root, "preprocessed_data", dataset_name+"%s-preprocessed.npz"%(str(cfg.image_shape)))
+							if cfg.verbose: print("Loading preprocessed data!\n")
+							load_path = os.path.join(cfg.local_data_root, "preprocessed_data", dataset_name+"%s-%d-preprocessed.npz"%(str(cfg.image_shape), cfg.n_files))
 							with np.load(load_path) as data:
 								train_data_temp = data['train_data']
 								val_data_temp 	= data['val_data']
@@ -92,12 +92,12 @@ for dataset_pair_names in cfg.dataset_pairs:
 							np_test_datasets.append(test_data)
 
 							if cfg.visualize_data:
-								show_np_data(train_data, train_label)
+								show_np_data(train_data, train_label, preprocessed=True)
 
-							train_dataset = tf.data.Dataset.from_tensor_slices(train_data)
-							val_dataset = tf.data.Dataset.from_tensor_slices(val_data)
-							val_labels = tf.data.Dataset.from_tensor_slices(val_label)
-							test_dataset = tf.data.Dataset.from_tensor_slices(test_data)
+							train_dataset 	= tf.data.Dataset.from_tensor_slices(train_data)
+							val_dataset 	= tf.data.Dataset.from_tensor_slices(val_data)
+							val_labels 		= tf.data.Dataset.from_tensor_slices(val_label)
+							test_dataset 	= tf.data.Dataset.from_tensor_slices(test_data)
 
 							train_datasets.append(train_dataset)
 							val_datasets.append(val_dataset)
@@ -127,13 +127,22 @@ for dataset_pair_names in cfg.dataset_pairs:
 						batched_train_datasets = [train_datasets[0].batch(cfg.batch_size), \
 											  	  train_datasets[1].batch(cfg.batch_size)]
 
+
+			  	  		#tf.random.set_seed(1)
 						batched_val_datasets = [val_datasets[0].batch(cfg.batch_size), \
 											    val_datasets[1].batch(cfg.batch_size)]
 
+			    		#tf.random.set_seed(1)
 						batched_val_labels = [val_labels_sets[0].batch(cfg.batch_size), \
 										      val_labels_sets[1].batch(cfg.batch_size)]
 
-						
+						plt.figure()
+						plt.subplot(2,1,1)
+						plt.imshow(batched_val_datasets[0].take(1))
+						plt.subplot(2,1,2)
+						plt.imshow(batched_val_labels[0].take(1))
+						plt.show()
+
 						# Call model according to settings
 						model = get_model(training=True)
 
@@ -186,10 +195,6 @@ for dataset_pair_names in cfg.dataset_pairs:
 							new_generate_data(model_save_path, batched_test_datasets, n_gen_imgs=1)
 
 					########################################################################################################
-					tf.keras.backend.clear_session()
-
-					cuda.select_device(0)
-					cuda.close()
 
 				except Exception:
 					traceback.print_exc()

@@ -20,7 +20,7 @@ all_datasets = {"XCAT_liver": 				{"ID"			: 1,
 											"name"			: "XCAT_liver",
 											"keyword"		: "",
 											"patient_dirs"	: False,
-											"path"			: root+"J-Datasets/genT1_XCAT_liver"},
+											"path"			: local_data_root+"/genT1_XCAT_liver"},
 
 				"patient_liver_nrrd": 		{"ID"			: 2,
 											"name"			: "patient_liver_nrrd",
@@ -32,13 +32,13 @@ all_datasets = {"XCAT_liver": 				{"ID"			: 1,
 											"name"			: "Dominik_XCAT_liver",
 											"keyword"		: "",
 											"patient_dirs"	: False,
-											"path"			: root+"J-Datasets/Dominik_genT1_XCAT_liver"},
+											"path"			: local_data_root+"/Dominik_genT1_XCAT_liver"},
 
 				"postVIBE_XCAT":			{"ID"			: 4,
 											"name"			: "postVIBE_XCAT",
 											"keyword"		: "",
 											"patient_dirs"	: False,
-											"path"			: root+"J-Datasets/postVIBE_XCAT"}}
+											"path"			: local_data_root+"/postVIBE_XCAT"}}
 
 
 ####################################### Data Augmentation Parameters ###################################
@@ -86,26 +86,26 @@ batch_size 			= 1
 
 # samples_per_volume = 4
 
-n_epochs 			= 100
+n_epochs 			= 2
 
 # How many different files to read out data from (will be cut down to an equal amount of each file for max. generalizability)
-n_files 			= 0 	# 0 for all available (56 XCAT models)
+n_files 			= 3 	# 0 for all available (56 XCAT models)
 
 # Total image count in training dataset (steps per epoch = imagecount / batchsize) 
 # --> keras automatically stops when one dataset runs out of data => image_count = 0 means train until smaller dataset runs out
-image_count 		= 200 	# 0 for all available
+image_count 		= 5 	# 0 for all available
 
 # !!! when changing make sure preprocess is True !!! 
 image_shape 		= [256, 256, 1] # data input shape
 
 
-save_period 		= 5 	# Save model and generate images every x epochs
+save_period 		= 1 	# Save model and generate images every x epochs
 
 
 verbose 			= True
 
 # Takes very long if all files are loaded, load files once and then use the generated preprocessed dataset by setting this to False
-preprocess			= False	# if False, takes saved preprocessed data
+preprocess			= True	# if False, takes saved preprocessed data
 
 augment 			= False # Does nothing rn
 
@@ -122,7 +122,7 @@ dataset_pairs 			= [["postVIBE_XCAT", "patient_liver_nrrd"]]
 						  #["Dominik_XCAT_liver", 	"patient_liver_nrrd"]]
 # generator_losses 		= ["comb"]
 models 					= ["DominikCycleGAN", "AdvancedCycleGAN"]
-loss_weights			= ["2"]
+loss_weights			= ["4", "5"]
 
 xcat_organ_mask			= "liver"
 
@@ -131,7 +131,7 @@ xcat_organ_mask			= "liver"
 # TODO: make list of trial configuration --> run one by one for better customizability
 
 # All data will be saved in folder named:
-trial_name 				= "more_tests"
+trial_name 				= "test"
 
 # TODO: write "-2" in folder name if folder already exists
 

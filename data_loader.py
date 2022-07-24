@@ -7,6 +7,7 @@ import keras
 from matplotlib import pyplot as plt
 import tensorflow as tf
 from numba import cuda
+import cv2
 
 import config as cfg
 
@@ -68,8 +69,14 @@ def load_data(dataset_name, n_data):
 					if modelnumber in label_filenames[i]:
 						organ_val = list(cfg.organ_mask_vals[cfg.xcat_organ_mask].items())[k][1]
 						label_series = np.where(np.round(label_series,3) == organ_val, 1.0, 0.0) # organ_val has 3 decimal places while the loaded image has 6
-			labels.append(label_series)
 
+						# Close labels morphologically, as blood vessels leave holes in organ mask
+						closed_labels = np.zeros_like(label_series)
+						kernel = np.ones((20,20),np.uint8)
+						for n in range(label_series.shape[-1]):
+							closed_labels[:,:,n] = cv2.morphologyEx(label_series[:,:,n], cv2.MORPH_CLOSE, kernel)
+
+			labels.append(closed_labels)
 		data.append(image_series)
 
 
@@ -300,7 +307,7 @@ def visualize_dataset(np_array):
 
 	if cfg.verbose: print("\nShowing dataset sample (close plot window to continue)")
 	np.random.shuffle(np_array)
-	show_n_images = min(64, np_array.shape[1])
+	show_n_images = min(64, np_array.shape[-1])
 
 	_, ax = plt.subplots(8, 8, figsize=(15, 15))
 	for i in range(show_n_images):
@@ -311,7 +318,7 @@ def visualize_dataset(np_array):
 
 def check_if_preprocessed(dataset_name):
 	# Checks if folder with preprocessed data exists for given dataset
-	return os.path.exists(os.path.join(cfg.local_data_root, "preprocessed_data", dataset_name+"-preprocessed.npz"))
+	return os.path.exists(os.path.join(cfg.local_data_root, "preprocessed_data", dataset_name+"%s-preprocessed.npz"%(str(cfg.image_shape))))
 		
 
 
@@ -350,10 +357,8 @@ def split_into_groups_and_save(dataset_name, dataset):
 	dataset = dataset[:,:,:,:,imgIDs]
 
 	train_data = dataset[:,:n_train_img,:,:,:]
-	val_data = dataset[:,n_train_img+1:n_train_img+n_val_img,:,:,:]
-	test_data = dataset[:,n_train_img+n_val_img+1:,:,:,:]
-
-
+	val_data = dataset[:,n_train_img:n_train_img+n_val_img,:,:,:]
+	test_data = dataset[:,n_train_img+n_val_img:,:,:,:]
 
 	def _get_all_imgs(data):
 		all_data = []	
@@ -374,9 +379,9 @@ def split_into_groups_and_save(dataset_name, dataset):
 
 	path = os.path.join(cfg.local_data_root, "preprocessed_data/")
 	Path(path).mkdir(parents=True, exist_ok=True)
-	np.savez(path+dataset_name+"%s-preprocessed.npz"%(str(cfg.image_shape)), train_data=train_data, val_data=val_data, test_data=test_data)
+	np.savez(path+dataset_name+"%s-%d-preprocessed.npz"%(str(cfg.image_shape), cfg.n_files), train_data=train_data, val_data=val_data, test_data=test_data)
 
-	if cfg.verbose: print("Saved train/val/test data as %s"%path+dataset_name+"%s-preprocessed.npz"%(str(cfg.image_shape)))
+	if cfg.verbose: print("Saved train/val/test data as %s"%path+dataset_name+"%s-%d-preprocessed.npz"%(str(cfg.image_shape), cfg.n_files))
 	if cfg.verbose: print(train_data.shape, val_data.shape, test_data.shape)
 
 
